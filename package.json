@@ -1,0 +1,13 @@
+{
+  "name": "gencss",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "build": "node --watch main.js --color --config=css.config.json --output=gen.css",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
