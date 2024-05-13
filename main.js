@@ -97,9 +97,21 @@ const PADDING = {
   pbl: "padding-block",
 }
 
+const MARGIN = {
+  m: "margin",
+  mt: "margin-top",
+  mb: "margin-bottom",
+  ml: "margin-left",
+  mr: "margin-right",
+  min: "margin-inline",
+  mbl: "margin-block",
+}
+
+const SPACING_PROPERTIES = [PADDING, MARGIN]
+
 // Validate spacing values
-const result = Object.entries(spacing)
-  .map(([spacer, spacer_value]) => {
+const result = SPACING_PROPERTIES.map((spacing_property) =>
+  Object.entries(spacing).map(([spacer, spacer_value]) => {
     let value = ""
     let unit = ""
     try {
@@ -122,14 +134,11 @@ const result = Object.entries(spacing)
     }
 
     console.log(spacer, num, unit)
-    const paddings = Object.entries(PADDING).map(
-      ([prefix, property]) =>
-        `.${prefix}-${spacer} {${EOL}\t${property}: ${num}${unit};${EOL}}`
-    )
-
-    return paddings
+    const generated_spacings = generate(spacing_property, spacer, num, unit)
+    return generated_spacings
   })
-  .flat()
+)
+  .flat(2)
   .join(EOL)
 
 console.log(result)
@@ -139,4 +148,10 @@ try {
   success(`Generated CSS written to: ${outputPath}`)
 } catch (err) {
   error(`${err}`)
+}
+function generate(property_family, spacer, num, unit) {
+  return Object.entries(property_family).map(
+    ([prefix, property]) =>
+      `.${prefix}-${spacer} {${EOL}\t${property}: ${num}${unit};${EOL}}`
+  )
 }
