@@ -55,16 +55,6 @@ if (config.length < 1) {
   process.exit(1)
 }
 
-console.log(config)
-
-// const configFile = await open(configPath)
-
-// for await (const chunk of configFile.readableWebStream()) {
-//   console.log(chunk)
-// }
-
-// await configFile.close()
-
 const ALLOWED_UNITS = ["rem", "px", "em"]
 
 const config_file = readFileSync(configPath, { encoding: "utf-8" })
@@ -78,14 +68,35 @@ try {
   process.exit(1)
 }
 
-console.log(config_obj)
-
 if (!config_obj.spacing) {
   error("Missing option in config: spacing")
   process.exit(1)
 }
-
 const spacing = config_obj.spacing
+const spacing_validated = Object.entries(spacing).reduce(
+  (acc, [key, value]) => {
+    const num_and_unit = validate_number_and_unit(value)
+
+    acc[key] = num_and_unit
+    return acc
+  },
+  {}
+)
+
+if (!config_obj.breakpoints) {
+  error("Missing option in config: breakpoints")
+  process.exit(1)
+}
+const breakpoints = config_obj.breakpoints
+const breakpoints_validated = Object.entries(breakpoints).reduce(
+  (acc, [key, value]) => {
+    const num_and_unit = validate_number_and_unit(value)
+
+    acc[key] = num_and_unit
+    return acc
+  },
+  {}
+)
 
 const PADDING = {
   p: "padding",
@@ -111,37 +122,19 @@ const SPACING_PROPERTIES = [PADDING, MARGIN]
 
 // Validate spacing values
 const result = SPACING_PROPERTIES.map((spacing_property) =>
-  Object.entries(spacing).map(([spacer, spacer_value]) => {
-    let value = ""
-    let unit = ""
-    try {
-      const splat = split_unit(spacer_value)
-      value = splat.value
-      unit = splat.unit
-    } catch (err) {
-      error(err.toString())
-      process.exit(1)
-    }
-    const num = Number(value)
-
-    const is_value_zero_and_unitless = num === 0 && unit === ""
-    const has_allowed_unit = ALLOWED_UNITS.some(
-      (allowed_unit) => unit === allowed_unit
+  Object.entries(spacing_validated).map(([spacer, { num, unit }]) => {
+    const generated_spacings = generate(
+      spacing_property,
+      breakpoints_validated,
+      spacer,
+      num,
+      unit
     )
-
-    if (!has_allowed_unit && !is_value_zero_and_unitless) {
-      error(`Invalid CSS unit: "${unit}"`)
-    }
-
-    console.log(spacer, num, unit)
-    const generated_spacings = generate(spacing_property, spacer, num, unit)
     return generated_spacings
   })
 )
-  .flat(2)
+  .flat(3)
   .join(EOL)
-
-console.log(result)
 
 try {
   writeFileSync(outputPath, result + EOL, { encoding: "utf-8" })
@@ -149,9 +142,43 @@ try {
 } catch (err) {
   error(`${err}`)
 }
-function generate(property_family, spacer, num, unit) {
-  return Object.entries(property_family).map(
-    ([prefix, property]) =>
-      `.${prefix}-${spacer} {${EOL}\t${property}: ${num}${unit};${EOL}}`
+
+function validate_number_and_unit(spacer_value) {
+  let value = ""
+  let unit = ""
+  try {
+    const splat = split_unit(spacer_value)
+    value = splat.value
+    unit = splat.unit
+  } catch (err) {
+    error(err.toString())
+    process.exit(1)
+  }
+  const num = Number(value)
+
+  const is_value_zero_and_unitless = num === 0 && unit === ""
+  const has_allowed_unit = ALLOWED_UNITS.some(
+    (allowed_unit) => unit === allowed_unit
   )
+
+  if (!has_allowed_unit && !is_value_zero_and_unitless) {
+    error(`Invalid CSS unit: "${unit}"`)
+  }
+  return { num, unit }
+}
+
+function generate(property_family, breakPoints, spacer, num, unit) {
+  return Object.entries(property_family).map(([prefix, property]) => {
+    return Object.entries(breakPoints).map(([bp_prefix, bp_value]) => {
+      if (bp_value.num === 0) {
+        return `.${prefix}-${spacer} {${EOL}\t${property}: ${num}${unit};${EOL}}${EOL}`
+      }
+
+      const top = `@media screen and (min-width: ${bp_value.num}${bp_value.unit}) {${EOL}\t`
+      const rule = `.${prefix}-${bp_prefix}-${spacer} {${EOL}\t\t${property}: ${num}${unit};${EOL}\t}`
+      const bottom = `${EOL}}`
+
+      return top + rule + bottom
+    })
+  })
 }
