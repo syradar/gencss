@@ -144,7 +144,7 @@ const result = SPACING_PROPERTIES.map((spacing_property) =>
 console.log(result)
 
 try {
-  writeFileSync(outputPath, result, { encoding: "utf-8" })
+  writeFileSync(outputPath, result + EOL, { encoding: "utf-8" })
   success(`Generated CSS written to: ${outputPath}`)
 } catch (err) {
   error(`${err}`)
