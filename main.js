@@ -1,6 +1,10 @@
 import { globSync, readFileSync, writeFileSync } from "node:fs"
 import { parseArgs, styleText } from "node:util"
 import { EOL } from "node:os"
+import CSSUtils from "./css.js"
+import Numbers from "./numbers.js"
+import TypeCheck from "./typeCheck.js"
+import Result from "./result.js"
 
 const options = {
   color: { type: "boolean" },
@@ -20,20 +24,6 @@ function get_loggers({ useColor, logger }) {
     error,
     info,
     success,
-  }
-}
-
-function split_unit(v) {
-  if (typeof v === "string" && v !== "") {
-    const split = v.match(/^([-.\d]+(?:\.\d+)?)(.*)$/)
-
-    if (!split) {
-      throw new RangeError("No number found")
-    }
-
-    return { value: split[1].trim(), unit: split[2].trim() }
-  } else {
-    return { value: v, unit: "" }
   }
 }
 
@@ -75,9 +65,12 @@ if (!config_obj.spacing) {
 const spacing = config_obj.spacing
 const spacing_validated = Object.entries(spacing).reduce(
   (acc, [key, value]) => {
-    const num_and_unit = validate_number_and_unit(value)
+    const num_and_unit = validateNumberAndUnit(value)
 
-    acc[key] = num_and_unit
+    if (num_and_unit.ok) {
+      acc[key] = num_and_unit.unwrap()
+    }
+
     return acc
   },
   {}
@@ -90,9 +83,12 @@ if (!config_obj.breakpoints) {
 const breakpoints = config_obj.breakpoints
 const breakpoints_validated = Object.entries(breakpoints).reduce(
   (acc, [key, value]) => {
-    const num_and_unit = validate_number_and_unit(value)
+    const num_and_unit = validateNumberAndUnit(value)
 
-    acc[key] = num_and_unit
+    if (num_and_unit.ok) {
+      acc[key] = num_and_unit.unwrap()
+    }
+
     return acc
   },
   {}
@@ -122,12 +118,12 @@ const SPACING_PROPERTIES = [PADDING, MARGIN]
 
 // Validate spacing values
 const result = SPACING_PROPERTIES.map((spacing_property) =>
-  Object.entries(spacing_validated).map(([spacer, { num, unit }]) => {
+  Object.entries(spacing_validated).map(([spacer, { value, unit }]) => {
     const generated_spacings = generate(
       spacing_property,
       breakpoints_validated,
       spacer,
-      num,
+      value,
       unit
     )
     return generated_spacings
@@ -143,38 +139,42 @@ try {
   error(`${err}`)
 }
 
-function validate_number_and_unit(spacer_value) {
-  let value = ""
-  let unit = ""
-  try {
-    const splat = split_unit(spacer_value)
-    value = splat.value
-    unit = splat.unit
-  } catch (err) {
-    error(err.toString())
-    process.exit(1)
-  }
-  const num = Number(value)
+/**
+ * Validates a number and its CSS unit.
+ * @param {string} spacer_value - The CSS value to validate.
+ */
+function validateNumberAndUnit(spacer_value) {
+  return CSSUtils.splitUnit(spacer_value)
+    .andThen((splat) => {
+      const result = Numbers.safeParseFloat(splat.value).map((num) => ({
+        value: num,
+        unit: splat.unit,
+      }))
 
-  const is_value_zero_and_unitless = num === 0 && unit === ""
-  const has_allowed_unit = ALLOWED_UNITS.some(
-    (allowed_unit) => unit === allowed_unit
-  )
+      return result
+    })
+    .andThen((numUnit) => {
+      const isUnitlessZero =
+        numUnit.value === 0 && TypeCheck.isEmpty(numUnit.unit)
+      const isValidUnit = ALLOWED_UNITS.includes(numUnit.unit)
+      console.log("label", numUnit)
 
-  if (!has_allowed_unit && !is_value_zero_and_unitless) {
-    error(`Invalid CSS unit: "${unit}"`)
-  }
-  return { num, unit }
+      if (!isValidUnit && !isUnitlessZero) {
+        return Result.Err(`Invalid CSS unit: "${numUnit.unit}"`)
+      }
+
+      return Result.Ok(numUnit)
+    })
 }
 
 function generate(property_family, breakPoints, spacer, num, unit) {
   return Object.entries(property_family).map(([prefix, property]) => {
     return Object.entries(breakPoints).map(([bp_prefix, bp_value]) => {
-      if (bp_value.num === 0) {
+      if (bp_value.value === 0) {
         return `.${prefix}-${spacer} {${EOL}\t${property}: ${num}${unit};${EOL}}${EOL}`
       }
 
-      const top = `@media screen and (min-width: ${bp_value.num}${bp_value.unit}) {${EOL}\t`
+      const top = `@media screen and (min-width: ${bp_value.value}${bp_value.unit}) {${EOL}\t`
       const rule = `.${prefix}-${bp_prefix}-${spacer} {${EOL}\t\t${property}: ${num}${unit};${EOL}\t}`
       const bottom = `${EOL}}`
 
