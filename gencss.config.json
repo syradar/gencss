@@ -8,7 +8,7 @@
     "5": "1rem",
     "23": "23rem"
   },
-  "breakpoints": {
+  "breakPoints": {
     "xs": "0",
     "sm": "576px",
     "md": "768px",
