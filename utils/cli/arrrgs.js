@@ -33,17 +33,20 @@ export function getArgs() {
     {}
   )
 
-  const logLevels = Object.keys(LOG_LEVEL)
-  if (!logLevels.includes(result.logLevel)) {
+  const validLogLevels = Object.keys(LOG_LEVEL)
+
+  if (!validLogLevels.includes(result.logLevel)) {
     return Result.Err(
-      new Error(`logLevel invalid. Valid values: ${logLevels.join(", ")}`)
+      new Error(
+        `Invalid logLevel. Valid values are: ${validLogLevels.join(", ")}`
+      )
     )
   }
 
   if (!result.config.includes(CONFIG_NAME)) {
     return Result.Err(
       new Error(
-        `config invalid. Should be ${CONFIG_NAME} but got: ${result.config}`
+        `Invalid config path. Expected to include: ${CONFIG_NAME}, but got: ${result.config}`
       )
     )
   }
