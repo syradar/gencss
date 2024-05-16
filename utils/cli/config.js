@@ -1,37 +1,50 @@
 import { globSync, readFileSync } from "node:fs"
+import { isEmpty } from "../type/typeCheck.js"
+import { safeJsonParse } from "../type/json.js"
+import Result from "../type/result.js"
+import { trace } from "../type/trace.js"
+
+const REQUIRED_OPTIONS = ["spacing", "breakpoints"]
+
+function safeReadFileSync(configPath) {
+  try {
+    const configFile = readFileSync(configPath, { encoding: "utf-8" })
+    return Result.Ok(configFile)
+  } catch (error) {
+    return Result.Err(error.message)
+  }
+}
 
 export function readConfig({ logger, configPath }) {
-  logger.debug(`Using config file: ${configPath}`)
+  return Result.Ok(configPath)
+    .map(trace((c) => logger.debug(`Using config file: ${c}`)))
+    .andThen(validateConfigPath)
+    .andThen(safeReadFileSync)
+    .map(trace(() => logger.debug("Read config file successfully")))
+    .andThen(safeJsonParse)
+    .andThen(validateOptions)
+    .map(trace((conf) => logger.debug("Config read and validated", conf)))
+}
 
-  const config = globSync([configPath])
+function validateConfigPath(configPath) {
+  const configFiles = globSync([configPath])
 
-  if (config.length < 1) {
-    logger.error("Config file not found")
-    process.exit(1)
+  if (configFiles.length < 1) {
+    return Result.Err("Config file not found")
   }
 
-  const config_file = readFileSync(configPath, { encoding: "utf-8" })
-  logger.debug("Read config file successfully")
+  return Result.Ok(configPath)
+}
 
-  let config_obj = {}
+function validateOptions(configObj) {
+  const missingOptions = REQUIRED_OPTIONS.filter((option) => !configObj[option])
 
-  try {
-    config_obj = JSON.parse(config_file)
-  } catch (error) {
-    logger.error(error.message)
-    process.exit(1)
+  if (!isEmpty(missingOptions)) {
+    const errorMessages = missingOptions.map(
+      (option) => `Missing option in config: ${option}`
+    )
+    return Result.Err(errorMessages)
   }
 
-  if (!config_obj.spacing) {
-    logger.error("Missing option in config: spacing")
-    process.exit(1)
-  }
-
-  if (!config_obj.breakpoints) {
-    logger.error("Missing option in config: breakpoints")
-    process.exit(1)
-  }
-  logger.debug("Config read and validated", config_obj)
-
-  return config_obj
+  return Result.Ok(configObj)
 }

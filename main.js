@@ -25,8 +25,16 @@ const logLevel = validArgs.logLevel
 const logger = new GenCSSLogger({ logger: console.log, useColor, logLevel })
 const config = readConfig({ configPath, logger })
 
+if (config.err) {
+  logger.error(config.val)
+  process.exit(1)
+}
+
+const safeConfig = config.safeUnwrap()
+
 const ALLOWED_UNITS = ["rem", "px", "em"]
-const spacing = config.spacing
+
+const spacing = safeConfig.spacing
 const spacing_validated = Object.entries(spacing).reduce(
   (acc, [key, value]) => {
     const num_and_unit = validateNumberAndUnit(value)
@@ -40,7 +48,7 @@ const spacing_validated = Object.entries(spacing).reduce(
   {}
 )
 
-const breakpoints = config.breakpoints
+const breakpoints = safeConfig.breakpoints
 const breakpoints_validated = Object.entries(breakpoints).reduce(
   (acc, [key, value]) => {
     const num_and_unit = validateNumberAndUnit(value)
