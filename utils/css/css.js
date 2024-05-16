@@ -1,5 +1,5 @@
-import Result from "./result.js"
-import Strings from "./strings.js"
+import Result from "../type/result.js"
+import Strings from "../type/strings.js"
 
 const NUMBER_WITH_UNIT_REGEXP = /^([-.\d]+(?:\.\d+)?)(.*)$/
 

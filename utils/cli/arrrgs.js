@@ -1,5 +1,5 @@
 import { parseArgs } from "node:util"
-import Result from "./result.js"
+import Result from "../type/result.js"
 import { LOG_LEVEL } from "./logger.js"
 
 const CONFIG_NAME = "gencss.config.json"

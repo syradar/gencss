@@ -1,13 +1,13 @@
 import { writeFileSync } from "node:fs"
 import { EOL } from "node:os"
 import { styleText } from "node:util"
-import { getArgs } from "./arrrgs.js"
-import { readConfig } from "./config.js"
-import CSSUtils from "./css.js"
-import { GenCSSLogger, LOG_LEVEL } from "./logger.js"
-import Numbers from "./numbers.js"
-import Result from "./result.js"
-import TypeCheck from "./typeCheck.js"
+import { getArgs } from "./utils/cli/arrrgs.js"
+import { readConfig } from "./utils/cli/config.js"
+import CSSUtils from "./utils/css/css.js"
+import { GenCSSLogger, LOG_LEVEL } from "./utils/cli/logger.js"
+import Numbers from "./utils/type/numbers.js"
+import Result from "./utils/type/result.js"
+import TypeCheck from "./utils/type/typeCheck.js"
 
 const args = getArgs()
 if (args.err) {
