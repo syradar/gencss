@@ -8,17 +8,17 @@ export const LOG_LEVEL = {
 }
 
 const LOG_COLORS = {
-  0: "white",
-  1: "cyan",
-  2: "orange",
-  3: "red",
+  [LOG_LEVEL.debug]: "white",
+  [LOG_LEVEL.info]: "cyan",
+  [LOG_LEVEL.warn]: "orange",
+  [LOG_LEVEL.error]: "red",
 }
 
 const LOG_NAMES = {
-  0: "DEBG",
-  1: "INFO",
-  2: "WARN",
-  3: "ERRO",
+  [LOG_LEVEL.debug]: "DEBG",
+  [LOG_LEVEL.info]: "INFO",
+  [LOG_LEVEL.warn]: "WARN",
+  [LOG_LEVEL.error]: "ERRO",
 }
 
 export class GenCSSLogger {
@@ -48,49 +48,33 @@ export class GenCSSLogger {
   }
 
   debug(...args) {
-    if (this.#logLevel > LOG_LEVEL.debug) {
-      return
-    }
-
-    this.#print(LOG_LEVEL.debug, ...args)
+    this.log(LOG_LEVEL.debug, ...args)
   }
 
   info(...args) {
-    if (this.#logLevel > LOG_LEVEL.info) {
-      return
-    }
-
-    this.#print(LOG_LEVEL.info, ...args)
+    this.log(LOG_LEVEL.info, ...args)
   }
 
   warn(...args) {
-    if (this.#logLevel > LOG_LEVEL.warn) {
-      return
-    }
-
-    this.#print(LOG_LEVEL.warn, ...args)
+    this.log(LOG_LEVEL.warn, ...args)
   }
 
   error(...args) {
-    if (this.#logLevel > LOG_LEVEL.error) {
+    this.log(LOG_LEVEL.error, ...args)
+  }
+
+  log(logLevel, ...args) {
+    if (this.#logLevel > logLevel) {
       return
     }
 
-    this.#print(LOG_LEVEL.error, ...args)
-  }
-
-  #print(logLevel, ...args) {
     const color = this.#getColor(logLevel)
 
-    const toPrint = args.map((arg) => {
-      if (typeof arg === "string") {
-        return styleText(color, String(arg))
-      }
+    const formattedArgs = args.map((arg) =>
+      typeof arg === "string" ? styleText(color, String(arg)) : arg
+    )
 
-      return arg
-    })
-
-    this.#logFn(`[${LOG_NAMES[logLevel] ?? "INFO"}]`, ...toPrint)
+    this.#logFn(`[${LOG_NAMES[logLevel]}]`, ...formattedArgs)
   }
 
   #getColor(logLevel) {
