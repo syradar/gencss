@@ -5,12 +5,13 @@
 class Ok {
   ok = true
   err = false
+  #value
 
   /**
    * @param {T} value - The value of the successful result.
    */
   constructor(value) {
-    this.value = value
+    this.#value = value
   }
 
   /**
@@ -18,7 +19,7 @@ class Ok {
    * @returns {T} The unwrapped value.
    */
   safeUnwrap() {
-    return this.value
+    return this.#value
   }
 
   /**
@@ -26,7 +27,7 @@ class Ok {
    * @returns {T} The unwrapped value.
    */
   unwrap() {
-    return this.value
+    return this.#value
   }
 
   /**
@@ -36,11 +37,11 @@ class Ok {
    * @template U
    */
   map(fn) {
-    return new Ok(fn(this.value))
+    return new Ok(fn(this.#value))
   }
 
   andThen(fn) {
-    return fn(this.value)
+    return fn(this.#value)
   }
 
   /**
@@ -50,7 +51,7 @@ class Ok {
    * @template U
    */
   unwrapOr(_defaultValue) {
-    return this.value
+    return this.#value
   }
 
   /**
@@ -58,7 +59,7 @@ class Ok {
    * @returns {T} The value.
    */
   get val() {
-    return this.value
+    return this.#value
   }
 }
 
@@ -69,12 +70,13 @@ class Ok {
 class Err {
   ok = false
   err = true
+  #value
 
   /**
    * @param {E} error - The error of the result.
    */
   constructor(error) {
-    this.value = error
+    this.#value = error
   }
 
   /**
@@ -82,7 +84,7 @@ class Err {
    * @throws {Error} An error indicating the unwrap attempt on an Err result.
    */
   unwrap() {
-    throw new Error(`Tried to unwrap an Err: ${this.value}`)
+    throw new Error(`Tried to unwrap an Err: ${this.#value}`)
   }
 
   /**
@@ -114,7 +116,7 @@ class Err {
    * @returns {E} The error.
    */
   get val() {
-    return this.value
+    return this.#value
   }
 }
 

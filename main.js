@@ -1,68 +1,32 @@
-import { globSync, readFileSync, writeFileSync } from "node:fs"
-import { parseArgs, styleText } from "node:util"
+import { writeFileSync } from "node:fs"
 import { EOL } from "node:os"
+import { styleText } from "node:util"
+import { getArgs } from "./arrrgs.js"
+import { readConfig } from "./config.js"
 import CSSUtils from "./css.js"
+import { GenCSSLogger, LOG_LEVEL } from "./logger.js"
 import Numbers from "./numbers.js"
-import TypeCheck from "./typeCheck.js"
 import Result from "./result.js"
+import TypeCheck from "./typeCheck.js"
 
-const options = {
-  color: { type: "boolean" },
-  config: { type: "string" },
-  output: { type: "string" },
-}
-
-function get_loggers({ useColor, logger }) {
-  const error = (msg) =>
-    logger(useColor ? styleText("red", String(msg)) : String(msg))
-  const info = (msg) =>
-    logger(useColor ? styleText("cyan", String(msg)) : String(msg))
-  const success = (msg) =>
-    logger(useColor ? styleText("green", String(msg)) : String(msg))
-
-  return {
-    error,
-    info,
-    success,
-  }
-}
-
-const { values } = parseArgs({ options })
-
-const useColor = values.color
-
-const { error, info, success } = get_loggers({ useColor, logger: console.log })
-
-const configPath = values.config
-const outputPath = values.output
-
-info(`Using config file: ${configPath}`)
-
-const config = globSync([configPath])
-
-if (config.length < 1) {
-  error("Config file not found")
+const args = getArgs()
+if (args.err) {
+  console.error(styleText("red", String(args.val.message)))
   process.exit(1)
 }
+
+const validArgs = args.safeUnwrap()
+
+const useColor = validArgs.color
+const configPath = validArgs.config
+const outputPath = validArgs.output
+const logLevel = validArgs.logLevel
+
+const logger = new GenCSSLogger({ logger: console.log, useColor, logLevel })
+const config = readConfig({ configPath, logger })
 
 const ALLOWED_UNITS = ["rem", "px", "em"]
-
-const config_file = readFileSync(configPath, { encoding: "utf-8" })
-info("Read config file successfully")
-
-let config_obj = {}
-try {
-  config_obj = JSON.parse(config_file)
-} catch (error) {
-  error(JSON.stringify(error))
-  process.exit(1)
-}
-
-if (!config_obj.spacing) {
-  error("Missing option in config: spacing")
-  process.exit(1)
-}
-const spacing = config_obj.spacing
+const spacing = config.spacing
 const spacing_validated = Object.entries(spacing).reduce(
   (acc, [key, value]) => {
     const num_and_unit = validateNumberAndUnit(value)
@@ -76,11 +40,7 @@ const spacing_validated = Object.entries(spacing).reduce(
   {}
 )
 
-if (!config_obj.breakpoints) {
-  error("Missing option in config: breakpoints")
-  process.exit(1)
-}
-const breakpoints = config_obj.breakpoints
+const breakpoints = config.breakpoints
 const breakpoints_validated = Object.entries(breakpoints).reduce(
   (acc, [key, value]) => {
     const num_and_unit = validateNumberAndUnit(value)
@@ -134,9 +94,9 @@ const result = SPACING_PROPERTIES.map((spacing_property) =>
 
 try {
   writeFileSync(outputPath, result + EOL, { encoding: "utf-8" })
-  success(`Generated CSS written to: ${outputPath}`)
+  logger.info(`Generated CSS written to: ${outputPath}`)
 } catch (err) {
-  error(`${err}`)
+  logger.error(`${err}`)
 }
 
 /**
@@ -157,7 +117,6 @@ function validateNumberAndUnit(spacer_value) {
       const isUnitlessZero =
         numUnit.value === 0 && TypeCheck.isEmpty(numUnit.unit)
       const isValidUnit = ALLOWED_UNITS.includes(numUnit.unit)
-      console.log("label", numUnit)
 
       if (!isValidUnit && !isUnitlessZero) {
         return Result.Err(`Invalid CSS unit: "${numUnit.unit}"`)
