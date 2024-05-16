@@ -1,24 +1,10 @@
 import { styleText } from "node:util"
 
 export const LOG_LEVEL = {
-  debug: 0,
-  info: 1,
-  warn: 2,
-  error: 3,
-}
-
-const LOG_COLORS = {
-  [LOG_LEVEL.debug]: "white",
-  [LOG_LEVEL.info]: "cyan",
-  [LOG_LEVEL.warn]: "orange",
-  [LOG_LEVEL.error]: "red",
-}
-
-const LOG_NAMES = {
-  [LOG_LEVEL.debug]: "DEBG",
-  [LOG_LEVEL.info]: "INFO",
-  [LOG_LEVEL.warn]: "WARN",
-  [LOG_LEVEL.error]: "ERRO",
+  debug: { level: 0, color: "white", name: "DEBG" },
+  info: { level: 1, color: "cyan", name: "INFO" },
+  warn: { level: 2, color: "orange", name: "WARN" },
+  error: { level: 3, color: "red", name: "ERRO" },
 }
 
 export class GenCSSLogger {
@@ -36,7 +22,7 @@ export class GenCSSLogger {
       {
         useColor: this.#useColor,
         logFn: this.#logFn,
-        logLevel: this.#logLevel,
+        logLevel: this.#logLevel.name,
       },
       "Got logger options:",
       {
@@ -64,7 +50,7 @@ export class GenCSSLogger {
   }
 
   log(logLevel, ...args) {
-    if (this.#logLevel > logLevel) {
+    if (this.#logLevel.level > logLevel.level) {
       return
     }
 
@@ -74,10 +60,10 @@ export class GenCSSLogger {
       typeof arg === "string" ? styleText(color, String(arg)) : arg
     )
 
-    this.#logFn(`[${LOG_NAMES[logLevel]}]`, ...formattedArgs)
+    this.#logFn(`[${logLevel.name}]`, ...formattedArgs)
   }
 
   #getColor(logLevel) {
-    return this.#useColor ? LOG_COLORS[logLevel] : "white"
+    return this.#useColor ? logLevel.color : "white"
   }
 }
