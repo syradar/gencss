@@ -3,17 +3,9 @@ import { isEmpty } from "../type/typeCheck.js"
 import { safeJsonParse } from "../type/json.js"
 import Result from "../type/result.js"
 import { trace } from "../type/trace.js"
+import { safeReadFileSync } from "./files.js"
 
-const REQUIRED_OPTIONS = ["spacing", "breakpoints"]
-
-function safeReadFileSync(configPath) {
-  try {
-    const configFile = readFileSync(configPath, { encoding: "utf-8" })
-    return Result.Ok(configFile)
-  } catch (error) {
-    return Result.Err(error.message)
-  }
-}
+const REQUIRED_OPTIONS = ["spacing", "breakPoints"]
 
 export function readConfig({ logger, configPath }) {
   return Result.Ok(configPath)

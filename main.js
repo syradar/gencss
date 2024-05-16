@@ -1,4 +1,3 @@
-import { writeFileSync } from "node:fs"
 import { EOL } from "node:os"
 import { styleText } from "node:util"
 import { getArgs } from "./utils/cli/arrrgs.js"
@@ -8,6 +7,7 @@ import { GenCSSLogger, LOG_LEVEL } from "./utils/cli/logger.js"
 import Numbers from "./utils/type/numbers.js"
 import Result from "./utils/type/result.js"
 import TypeCheck from "./utils/type/typeCheck.js"
+import { safeWriteFileSync } from "./utils/cli/files.js"
 
 const args = getArgs()
 if (args.err) {
@@ -132,6 +132,10 @@ function validateNumberAndUnit(spacer_value) {
 
       return Result.Ok(numUnit)
     })
+const writeResult = safeWriteFileSync(outputPath, result)
+if (writeResult.err) {
+  logger.error(`Failed to write to file: ${err.message}`)
+  process.exit(1)
 }
 
 function generate(property_family, breakPoints, spacer, num, unit) {
