@@ -1,19 +1,22 @@
 import { EOL } from "node:os"
 import Result from "../type/result.js"
 import Strings from "../type/strings.js"
-import TypeCheck from "../type/typeCheck.js"
+import TypeCheck, { isArray } from "../type/typeCheck.js"
 import Numbers from "../type/numbers.js"
 
 const NUMBER_WITH_UNIT_REGEXP = /^([-.\d]+(?:\.\d+)?)(.*)$/
 const ALLOWED_UNITS = ["rem", "px", "em"]
+const ALLOWED_VALUES = ["auto"]
 const PADDING = {
   p: "padding",
   pt: "padding-top",
   pb: "padding-bottom",
   pl: "padding-left",
   pr: "padding-right",
-  pin: "padding-inline",
-  pbl: "padding-block",
+  ps: "padding-inline-start",
+  pe: "padding-inline-end",
+  px: ["padding-left", "padding-right"],
+  py: ["padding-top", "padding-bottom"],
 }
 const MARGIN = {
   m: "margin",
@@ -21,8 +24,10 @@ const MARGIN = {
   mb: "margin-bottom",
   ml: "margin-left",
   mr: "margin-right",
-  min: "margin-inline",
-  mbl: "margin-block",
+  ms: "margin-inline-start",
+  me: "margin-inline-end",
+  mx: ["margin-left", "margin-right"],
+  my: ["margin-top", "margin-bottom"],
 }
 const SPACING_PROPERTIES = [PADDING, MARGIN]
 
@@ -53,6 +58,13 @@ export function generateCssClasses({ spacing, breakPoints }) {
  * @param {string} spacerValue - The CSS value to validate.
  */
 function validateNumberAndUnit(spacerValue) {
+  if (ALLOWED_VALUES.includes(spacerValue)) {
+    return Result.Ok({
+      value: spacerValue,
+      unit: "",
+    })
+  }
+
   return splitUnit(spacerValue)
     .andThen((splat) => {
       const result = Numbers.safeParseFloat(splat.value).map((num) => ({
@@ -79,16 +91,38 @@ function generate(propertyFamily, breakPoints, spacer, num, unit) {
   return Object.entries(propertyFamily).map(([prefix, property]) => {
     return Object.entries(breakPoints).map(([bpPrefix, bpValue]) => {
       if (bpValue.value === 0) {
-        return `.${prefix}-${spacer} {${EOL}\t${property}: ${num}${unit};${EOL}}${EOL}`
+        const selectorStart = `.${prefix}-${spacer} {${EOL}`
+        const rules = generatePropertyPairs({
+          property,
+          num,
+          unit,
+          indent: false,
+        })
+        const selectorEnd = `}${EOL}`
+
+        return selectorStart + rules + selectorEnd
       }
 
-      const top = `@media screen and (min-width: ${bpValue.value}${bpValue.unit}) {${EOL}\t`
-      const rule = `.${prefix}-${bpPrefix}-${spacer} {${EOL}\t\t${property}: ${num}${unit};${EOL}\t}`
-      const bottom = `${EOL}}`
+      const mediaStart = `@media screen and (min-width: ${bpValue.value}${bpValue.unit}) {${EOL}\t`
+      const selectorStart = `.${prefix}-${bpPrefix}-${spacer} {${EOL}`
+      const rules = generatePropertyPairs({ property, num, unit, indent: true })
+      const selectorEnd = `\t}`
+      const bottomEnd = `${EOL}}`
 
-      return top + rule + bottom
+      return mediaStart + selectorStart + rules + selectorEnd + bottomEnd
     })
   })
+}
+
+function generatePropertyPairs({ property, num, unit, indent }) {
+  const properties = isArray(property) ? property : [property]
+  const indentation = indent ? `\t\t` : `\t`
+
+  const rules = properties.map(
+    (prop) => `${indentation}${prop}: ${num}${unit};${EOL}`
+  )
+
+  return rules.join("")
 }
 
 /**
